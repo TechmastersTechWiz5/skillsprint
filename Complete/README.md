@@ -4,18 +4,74 @@ A runnable, source-grounded employee onboarding platform with a dual-pipeline ar
 
 ---
 
-## 🚀 Quick Start
+## 11. Installation Instructions
 
-1. **Install dependencies**:
+1. **Python Installation**
+   Ensure you have Python 3.8 or higher installed on your system. You can download it from [python.org](https://www.python.org/downloads/).
+
+2. **Environment Creation**
+   Open your terminal and create a virtual environment to isolate dependencies:
+   ```bash
+   python -m venv .venv
+   # On Windows:
+   .venv\Scripts\activate
+   # On macOS/Linux:
+   source .venv/bin/activate
+   ```
+
+3. **Dependency Installation**
+   Install all required libraries using `requirements.txt`:
    ```bash
    pip install -r requirements.txt
    ```
-2. **Start the server**:
+
+4. **Secure API-Key Configuration**
+   - Copy the `.env.example` file and rename the copy to `.env`.
+   - **Important:** Never commit the `.env` file to public repositories! (It is already added to `.gitignore`).
+   - Open `.env` and fill in your private API credentials:
+     - `GROQ_API_KEY=your_secure_api_key_here`
+     - Keep other defaults as they are.
+
+5. **API Configuration**
+   The application natively supports `Groq` for GenAI plan generation. You can configure `SKILLSPRINT_AI_PROVIDER=groq` and `SKILLSPRINT_GROQ_MODEL=llama3-70b-8192` (or your preferred OSS model) in `.env`.
+
+6. **Database Configuration**
+   - The application automatically configures and initializes a local SQLite database (`data/skillsprint.db`) upon startup.
+   - If you wish to sync with MongoDB, add your connection string to `MONGODB_URI` in `.env` and set `MONGODB_SYNC_ON_START=true`.
+
+7. **Document Setup**
+   The system comes pre-seeded with 20 sample policies, FAQs, and SOPs for the fictional organizational dataset. No manual setup is needed for the default environment, but new documents can be uploaded via the Admin portal.
+
+8. **Application Startup**
+   Start the local development server:
    ```bash
    python app.py
    ```
-3. **Open in browser**:
-   Navigate to `http://127.0.0.1:5000`.
+   Navigate to `http://127.0.0.1:5000` in your web browser.
+
+## 12. Execution Instructions
+
+- **Login:** Open `/login`. Admin login: `admin` / `Admin@123`. Employee login: `emp001` / `Welcome@123`.
+- **Upload documents:** Go to the Admin Dashboard > Documents > Click "Upload". Select a `.txt`, `.md`, `.pdf`, or `.docx` file.
+- **Create role:** Go to Admin Dashboard > Users. Use the Create Employee form to set up a new role.
+- **Create employee:** Fill the form in Users tab to create an employee and generate their account instantly.
+- **Generate requirement matrix:** Uploading and approving a new policy document automatically parses, extracts, and generates the underlying requirement matrix.
+- **Generate onboarding plan:** Next to any employee in the "Employees" tab, click "Generate Plan". The GenAI pipeline will formulate a custom plan.
+- **Run validation:** Python validation happens automatically behind the scenes as soon as the GenAI API responds. It checks for traceability, required modules, and security flags.
+- **Review comparison results:** Open a generated plan to see the "Python expected" vs "GenAI result" match/mismatch scores and missing modules.
+- **Review hallucination warnings:** When reviewing a plan, unsupported modules lacking source references will be flagged as "Unsupported" or "Contradictory".
+- **Review contradictions:** Similarly, older conflicting policy rules will be flagged by the Python engine.
+- **Approve content:** In the "Plans" tab, click "Review" and choose "Approve" (or "Reject").
+- **Track employee progress:** Switch to the Employee Profile tab to see live completion percentages.
+- **Update policy:** Uploading a new version of an existing document will automatically supersede the old version.
+- **Regenerate affected content:** The "Impact Analysis" tab flags plans needing updates due to updated policies. Click "Regenerate" to update them.
+- **Generate reports:** Click the "Export" button on compliance tables to download as CSV/Excel/PDF.
+
+## 13. Troubleshooting
+
+- **Server Not Starting / Port In Use:** Ensure no other python processes are running on port 5000. Run `Stop-Process -Name "python" -Force` on Windows if stuck.
+- **AI Generation Failing:** Check your `.env` to ensure `GROQ_API_KEY` is valid. If quotas are exceeded, the app will gracefully fallback to an offline structured template.
+- **Database Locks:** Stop the server and delete `data/skillsprint.db` to cleanly reset the database, then run `python app.py` again.
 
 ---
 

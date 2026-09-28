@@ -222,11 +222,13 @@ function renderDocumentRegister() {
     ? matchingDocuments.map((doc) => {
         let actionHtml = "";
         if (doc.injection_flag) {
-          actionHtml = '<span class="tag danger">Security Flagged</span>';
+          actionHtml = `<span class="tag danger" style="margin-right:8px;">Security Flagged</span>`;
+          if (canApprove) actionHtml += `<button class="view-doc-btn secondary-action" data-doc-id="${doc.id}" style="padding:6px 12px; font-size:12px;">Review</button>`;
         } else if (doc.status === "Pending Review" && canApprove) {
-          actionHtml = `<button class="approve-doc-btn primary-btn" data-doc-id="${doc.id}" style="padding:6px 12px; font-size:12px;">Approve</button>`;
+          actionHtml = `<button class="view-doc-btn primary-btn" data-doc-id="${doc.id}" style="padding:6px 12px; font-size:12px;">Review & Approve</button>`;
         } else {
           actionHtml = `<span class="tag ${doc.status === "Active" ? "ok" : "warn"}">${doc.status}</span>`;
+          if (canApprove) actionHtml = `<button class="view-doc-btn secondary-action" data-doc-id="${doc.id}" style="padding:6px 12px; font-size:12px; margin-right:8px;">View</button>` + actionHtml;
         }
 
         return `<div class="record">
@@ -239,20 +241,67 @@ function renderDocumentRegister() {
       }).join("")
     : '<p class="sub">No matching documents found.</p>';
 
-  document.querySelectorAll(".approve-doc-btn").forEach((btn) => {
+  document.querySelectorAll(".view-doc-btn").forEach((btn) => {
     btn.onclick = async () => {
-      btn.disabled = true;
-      btn.textContent = "Approving...";
+      const docId = btn.dataset.docId;
+      const modal = document.getElementById("docModal");
+      const titleEl = document.getElementById("docModalTitle");
+      const contentEl = document.getElementById("docModalContent");
+      const approveBtn = document.getElementById("docModalApproveBtn");
+      const rejectBtn = document.getElementById("docModalRejectBtn");
+      
+      modal.style.display = "flex";
+      contentEl.textContent = "Loading content...";
+      approveBtn.style.display = "none";
+      rejectBtn.style.display = "none";
+      
       try {
-        const res = await requestJson(`/api/documents/${btn.dataset.docId}/approve`, { method: "POST" });
-        showToast(res.message);
-        await loadDocuments();
-        await loadRequirements();
-        await loadOverview();
+        const res = await requestJson(`/api/documents/${docId}/content`);
+        titleEl.textContent = res.title;
+        contentEl.textContent = res.content;
+        
+        const docRecord = appState.documents.find(d => d.id === docId);
+        if (docRecord && (docRecord.status === "Pending Review" || docRecord.status === "Security Review")) {
+            if (!docRecord.injection_flag) {
+                approveBtn.style.display = "block";
+            }
+            rejectBtn.style.display = "block";
+            
+            approveBtn.onclick = async () => {
+                approveBtn.disabled = true;
+                approveBtn.textContent = "Approving...";
+                try {
+                    const approveRes = await requestJson(`/api/documents/${docId}/approve`, { method: "POST" });
+                    showToast(approveRes.message);
+                    modal.style.display = "none";
+                    await loadDocuments();
+                    await loadRequirements();
+                    await loadOverview();
+                } catch (err) {
+                    showToast(err.message, "error");
+                    approveBtn.disabled = false;
+                    approveBtn.textContent = "Approve";
+                }
+            };
+            
+            rejectBtn.onclick = async () => {
+                rejectBtn.disabled = true;
+                rejectBtn.textContent = "Rejecting...";
+                try {
+                    const rejectRes = await requestJson(`/api/documents/${docId}/reject`, { method: "POST" });
+                    showToast(rejectRes.message);
+                    modal.style.display = "none";
+                    await loadDocuments();
+                    await loadOverview();
+                } catch (err) {
+                    showToast(err.message, "error");
+                    rejectBtn.disabled = false;
+                    rejectBtn.textContent = "Reject";
+                }
+            };
+        }
       } catch (err) {
-        showToast(err.message, "error");
-        btn.disabled = false;
-        btn.textContent = "Approve";
+        contentEl.textContent = "Error loading document: " + err.message;
       }
     };
   });

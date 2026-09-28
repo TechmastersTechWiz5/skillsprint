@@ -276,7 +276,7 @@ def seed():
                 "Scenario assessment" if i % 3 == 0 else "Knowledge check",
             ),
         )
-    for i, role in enumerate(ROLES):
+    for i, role in enumerate(ROLES[:1]):
         c.execute(
             "INSERT INTO employees VALUES (?,?,?,?,?,?,?)",
             (
@@ -321,19 +321,7 @@ def seed_users():
             str(date.today()),
         ),
     )
-    c.execute(
-        "INSERT OR IGNORE INTO users VALUES (?,?,?,?,?,?,?)",
-        (
-            "USR-REVIEWER",
-            "reviewer",
-            generate_password_hash("Reviewer@123"),
-            "reviewer",
-            None,
-            1,
-            str(date.today()),
-        ),
-    )
-    for i in range(1, 11):
+    for i in range(1, 2):
         c.execute(
             "INSERT OR IGNORE INTO users VALUES (?,?,?,?,?,?,?)",
             (
@@ -1348,6 +1336,26 @@ def approve(doc_id):
         requirements_added=len(new_rows),
         role=role,
     )
+
+
+@app.post("/api/documents/<doc_id>/reject")
+@api_auth("admin", "reviewer")
+def reject_document(doc_id):
+    doc = one("SELECT * FROM documents WHERE id=?", (doc_id,))
+    if not doc:
+        return jsonify(error="Document not found"), 404
+    execute("UPDATE documents SET status='Rejected' WHERE id=?", (doc_id,))
+    return jsonify(message="Document has been rejected.")
+
+
+@app.get("/api/documents/<doc_id>/content")
+@api_auth("admin", "reviewer")
+def document_content(doc_id):
+    doc = one("SELECT content, title, category FROM documents WHERE id=?", (doc_id,))
+    if not doc:
+        return jsonify(error="Document not found"), 404
+    return jsonify(title=doc["title"], category=doc["category"], content=doc["content"])
+
 
 
 @app.post("/api/generate/<employee_id>")
